@@ -107,17 +107,23 @@ fn main() {
         "Porty starting"
     );
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
-        .thread_name("porty-net")
-        .enable_all()
-        .build()
-        .expect("failed to start the Porty network runtime");
+    // GPUI invokes the `Application::run` closure once and drops it right
+    // after, so a runtime owned by that closure would be shut down as soon as
+    // the window opens and every later `spawn` would be silently discarded.
+    // The network runtime must live for the whole process, hence the leak.
+    let runtime: &'static tokio::runtime::Runtime = Box::leak(Box::new(
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_name("porty-net")
+            .enable_all()
+            .build()
+            .expect("failed to start the Porty network runtime"),
+    ));
 
     let settings_path = config::default_settings_path();
     tracing::info!(settings = %settings_path.display(), "loading settings");
     let service = runtime
-        .block_on(async { Porty::open(tokio::runtime::Handle::current(), settings_path.clone()) })
+        .block_on(async { Porty::open(runtime.handle().clone(), settings_path.clone()) })
         .expect("failed to initialize Porty");
     tracing::info!(hosts = service.hosts().len(), "engine ready");
 
