@@ -30,7 +30,8 @@ GitHub Actions builds two portable bundles on every push:
 | macOS 11+ Apple Silicon | `Porty-macOS-arm64.zip` |
 
 Open the [latest build](https://github.com/ztxtxwd/Porty/actions/workflows/build.yml)
-and download the artifact for your platform.
+and download the artifact for your platform, or grab the packaged zips from
+[Releases](https://github.com/ztxtxwd/Porty/releases).
 
 The binaries are unsigned. On Windows, SmartScreen → **More info → Run anyway**.
 On macOS, right-click the app → **Open**, or run

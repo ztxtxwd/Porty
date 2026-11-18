@@ -85,6 +85,8 @@ jobs:
         run: |
           set -euo pipefail
           file target/aarch64-apple-darwin/release/porty
+          file target/aarch64-apple-darwin/release/porty | grep -q "arm64" \
+            || { echo "macOS binary is not arm64"; exit 1; }
 
           APP=dist/Porty.app
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -109,3 +111,35 @@ jobs:
           name: Porty-macOS-arm64
           path: Porty-macOS-arm64.zip
           if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows-x64, macos-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Porty ${{ github.ref_name }}
+          body: |
+            Native SSH port forwarding and remote port discovery.
+
+            | Platform | File |
+            | --- | --- |
+            | Windows 10/11 x86_64 | `Porty-Windows-x64.zip` (`porty.exe`) |
+            | macOS 11+ Apple Silicon | `Porty-macOS-arm64.zip` (`Porty.app`) |
+
+            Both builds are unsigned: on Windows use SmartScreen's
+            **More info → Run anyway**; on macOS right-click the app → **Open**
+            (or remove the quarantine attribute with `xattr -dr com.apple.quarantine`).
+          files: |
+            artifacts/Porty-Windows-x64/Porty-Windows-x64.zip
+            artifacts/Porty-macOS-arm64/Porty-macOS-arm64.zip
+          fail_on_unmatched_files: true
