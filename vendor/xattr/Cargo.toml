@@ -1,0 +1,25 @@
+# Vendored copy of `xattr 0.2.3` with a Linux-only compatibility fix.
+#
+# `zed-async-tar` (via `gpui` -> `gpui_http_client`) depends on `xattr = 0.2`,
+# whose `ENOATTR` constant no longer exists in recent `libc` releases on Linux.
+# The upstream crate is unmaintained at 0.2.3, so we vendor it and map the
+# Linux constant to `ENODATA`, which is the value it aliased historically.
+[package]
+name = "xattr"
+version = "0.2.3"
+authors = ["Steven Allen <steven@stebalien.com>"]
+description = "unix extended filesystem attributes (vendored, Linux ENOATTR fix)"
+documentation = "https://docs.rs/xattr"
+keywords = ["xattr", "filesystem", "unix"]
+license = "MIT/Apache-2.0"
+repository = "https://github.com/Stebalien/xattr"
+# Upstream 0.2.3 is an edition-2015 crate; keep it that way so its `use sys::...`
+# paths keep resolving.
+edition = "2015"
+
+[dependencies.libc]
+version = "0.2"
+
+[features]
+default = ["unsupported"]
+unsupported = []
