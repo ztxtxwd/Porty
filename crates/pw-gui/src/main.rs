@@ -11,6 +11,8 @@ mod ports_view;
 mod theme;
 
 use std::borrow::Cow;
+use std::io::Write as _;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use gpui::{
@@ -94,12 +96,16 @@ impl AssetSource for Assets {
 }
 
 fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "porty=info,pw_core=info,info".into()),
-        )
-        .init();
+    let (log_path, _log_guard) = init_logging();
+    install_panic_hook(log_path.clone());
+
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        os = std::env::consts::OS,
+        arch = std::env::consts::ARCH,
+        log = %log_path.display(),
+        "Porty starting"
+    );
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(2)
@@ -109,16 +115,20 @@ fn main() {
         .expect("failed to start the Porty network runtime");
 
     let settings_path = config::default_settings_path();
+    tracing::info!(settings = %settings_path.display(), "loading settings");
     let service = runtime
-        .block_on(async { Porty::open(tokio::runtime::Handle::current(), settings_path) })
+        .block_on(async { Porty::open(tokio::runtime::Handle::current(), settings_path.clone()) })
         .expect("failed to initialize Porty");
+    tracing::info!(hosts = service.hosts().len(), "engine ready");
 
     let application = Application::new().with_assets(Assets);
     let theme_preference = service.theme_preference();
 
     application.run(move |cx| {
-        // Keep the Tokio runtime alive for as long as the UI runs.
-        let _runtime = &runtime;
+        // Keep the Tokio runtime alive and make it the thread-local context.
+        // UI callbacks run on this thread; code that needs to spawn must find
+        // the runtime here (the engine also spawns via an explicit handle).
+        let _runtime_guard = runtime.enter();
 
         gpui_component::init(cx);
         theme::apply_at_startup(theme_preference, cx);
@@ -146,8 +156,60 @@ fn main() {
                 let view = cx.new(|cx| app::PortyApp::new(service, window, cx));
                 cx.new(|cx| Root::new(view, window, cx))
             })?;
+            tracing::info!("main window opened");
             Ok::<_, anyhow::Error>(())
         })
         .detach();
     });
+}
+
+/// Log to `Porty/logs/porty.log` because GUI-subsystem builds have no visible
+/// stderr when launched from Explorer or Finder. Override verbosity with
+/// `RUST_LOG=debug`. The guard must live for the whole process so the writer
+/// flushes on exit.
+fn init_logging() -> (PathBuf, tracing_appender::non_blocking::WorkerGuard) {
+    let base = config::config_dir().join("logs");
+    let dir = match std::fs::create_dir_all(&base) {
+        Ok(()) => base,
+        Err(err) => {
+            eprintln!("could not create {}: {err}", base.display());
+            std::env::temp_dir()
+        }
+    };
+
+    let appender = tracing_appender::rolling::never(&dir, "porty.log");
+    let (writer, guard) = tracing_appender::non_blocking(appender);
+    tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_writer(writer)
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "porty=info,pw_core=info,info".into()),
+        )
+        .init();
+    (dir.join("porty.log"), guard)
+}
+
+/// Record panics (message, source location, backtrace) before the process
+/// exits. A release build has no console, so this is the only diagnostic that
+/// survives a crash.
+fn install_panic_hook(log_path: PathBuf) {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let report = format!(
+            "\n===== PANIC =====\nthread: {}\n{}\n\n{}\n===== END PANIC =====\n",
+            std::thread::current().name().unwrap_or("<unnamed>"),
+            info,
+            std::backtrace::Backtrace::force_capture()
+        );
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+        {
+            let _ = file.write_all(report.as_bytes());
+            let _ = file.flush();
+        }
+        default_hook(info);
+    }));
 }

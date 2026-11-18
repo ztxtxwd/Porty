@@ -193,10 +193,15 @@ impl SshSession {
         self.handle.read().await.clone()
     }
 
-    /// Start the connect/reconnect loop. Must be called from within a Tokio runtime.
-    pub fn start(self: &Arc<Self>) {
+    /// Start the connect/reconnect loop on the supplied runtime.
+    ///
+    /// This intentionally takes an explicit handle instead of relying on
+    /// `tokio::spawn`: the GUI calls `connect` from GPUI's UI thread, which is
+    /// not a Tokio runtime context. Spawning there would panic with
+    /// "there is no reactor running" and take the whole app down.
+    pub fn start(self: &Arc<Self>, rt: &tokio::runtime::Handle) {
         let this = self.clone();
-        tokio::spawn(async move { this.run().await });
+        rt.spawn(async move { this.run().await });
     }
 
     /// Stop the reconnect loop and close the transport.

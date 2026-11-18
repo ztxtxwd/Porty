@@ -1,4 +1,4 @@
-Porty v0.1.0 — 原生 SSH 端口转发 + 远程端口自动发现
+Porty v0.1.1 — 原生 SSH 端口转发 + 远程端口自动发现
 =====================================================
 
 纯 Rust + GPUI，原生 GPU 渲染，无 Electron。
@@ -46,6 +46,15 @@ Porty v0.1.0 — 原生 SSH 端口转发 + 远程端口自动发现
   • Windows 设置：%APPDATA%\Porty\settings.json
   • macOS 设置：~/Library/Application Support/Porty/settings.json
   • 重置：关闭程序后删除该 settings.json。
+
+【日志 / 崩溃排查】
+  • 日志文件：
+      Windows: %APPDATA%\Porty\logs\porty.log
+      macOS:   ~/Library/Application Support/Porty/logs/porty.log
+  • 程序会把 panic 信息（位置 + backtrace）写入这个文件。
+  • 需要更详细日志时，在终端设置 RUST_LOG=debug 后启动：
+      PowerShell:  $env:RUST_LOG="debug"; .\porty.exe
+      macOS:       RUST_LOG=debug /Applications/Porty.app/Contents/MacOS/porty
 
 【已知限制】
   • 不支持 ProxyJump（会读取但不会使用该配置）。

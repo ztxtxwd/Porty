@@ -444,7 +444,7 @@ impl Porty {
         let config = SessionConfig::from_host(&host);
         let session = Arc::new(SshSession::new(config, self.events.clone()));
         self.sessions.insert(host_id.to_string(), session.clone());
-        session.start();
+        session.start(&self.rt);
         self.spawn_session_watcher(host_id.to_string(), session.clone());
         if host.auto_discover {
             self.start_discovery(host_id.to_string(), session);
@@ -1050,6 +1050,29 @@ mod tests {
         assert!(rules[0].auto_discovered);
         // The host is not connected, so the rule exists but stays stopped.
         assert_eq!(rules[0].state, RuleState::Stopped);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn connect_from_a_non_runtime_thread_does_not_panic() {
+        let path = test_path("non-runtime-connect");
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        let mut settings = Settings::default();
+        settings
+            .hosts
+            .push(HostConfig::manual("unreachable", "127.0.0.1", 1, None));
+
+        let service = Porty::from_settings(runtime.handle().clone(), path.clone(), settings);
+
+        // This test thread has no Tokio runtime context. This is how the GPUI
+        // event loop calls connect(); a bare `tokio::spawn` here would panic.
+        service.connect("unreachable").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        service.disconnect("unreachable");
         let _ = std::fs::remove_file(path);
     }
 

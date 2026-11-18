@@ -3,7 +3,7 @@ members = ["crates/pw-core", "crates/pw-gui"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 authors = ["Porty contributors"]
@@ -31,6 +31,7 @@ dashmap = "6"
 parking_lot = "0.12"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
 gpui = "0.2.2"
 gpui-component = "0.5.1"
 open = "5"

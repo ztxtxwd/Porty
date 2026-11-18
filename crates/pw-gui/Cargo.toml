@@ -17,6 +17,7 @@ open.workspace = true
 pw-core = { path = "../pw-core" }
 tokio.workspace = true
 tracing.workspace = true
+tracing-appender.workspace = true
 tracing-subscriber.workspace = true
 
 [build-dependencies]

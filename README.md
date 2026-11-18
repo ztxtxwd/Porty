@@ -182,6 +182,20 @@ same local port when possible) instead of duplicating.
 | `Cmd/Ctrl + R`              | Re-import `~/.ssh/config`       |
 | `Cmd/Ctrl + Shift + L`      | Toggle light / dark theme       |
 
+## Troubleshooting
+
+Porty writes logs to the platform config directory:
+
+| OS | Log |
+| --- | --- |
+| Windows | `%APPDATA%\Porty\logs\porty.log` |
+| macOS | `~/Library/Application Support/Porty/logs/porty.log` |
+| Linux | `$XDG_CONFIG_HOME/porty/logs/porty.log` |
+
+Panics are recorded there with their source location and a backtrace. Set
+`RUST_LOG=debug` before launching for verbose logs (on Windows:
+`$env:RUST_LOG="debug"; .\porty.exe`).
+
 ## Tests
 
 ```bash
