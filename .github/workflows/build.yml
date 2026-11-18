@@ -64,9 +64,9 @@ jobs:
 
   macos-arm64:
     name: macOS arm64
-    # macos-14 runners are Apple Silicon (arm64). The explicit target keeps the
-    # artifact arm64 even if the runner image ever changes architecture.
-    runs-on: macos-14
+    # The explicit target keeps the artifact arm64 even if the runner image is
+    # Intel; macOS runners have both Apple clang backends.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
