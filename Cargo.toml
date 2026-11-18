@@ -32,7 +32,10 @@ parking_lot = "0.12"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
-gpui = "0.2.2"
+# `runtime_shaders` compiles the Metal shaders at startup instead of build time.
+# Needed for local development with Command Line Tools only (no `xcrun metal`);
+# CI with full Xcode can drop this feature.
+gpui = { version = "0.2.2", features = ["runtime_shaders"] }
 gpui-component = "0.5.1"
 open = "5"
 
